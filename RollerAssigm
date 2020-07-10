@@ -1,0 +1,44 @@
+import java.util.Iterator;
+
+public class Roll implements Iterable<Integer>, Iterator<Integer> {
+    private static final int FIRSTRANGE_NUMB = 1;
+    private static final int RANGE_NUMB = 7;
+    private static final int ROLLS_NUMB = 11;
+    private static final int ROLLING_PARAM = 3;
+
+    private int counter = 0;
+    private int summary = 0;
+
+    public Iterator<Integer> iterator() {
+        return this;
+    }
+
+    public Integer next() {
+        if (counter != 0 && counter%ROLLING_PARAM == 0){
+            summary = 0;
+        }
+        int num = (int)(FIRSTRANGE_NUMB + (Math.random() * RANGE_NUMB));
+        counter++;
+        summary += num;
+        return num;
+    }
+
+    public boolean hasNext() {
+        if (summary == ROLLS_NUMB && (counter%ROLLING_PARAM) == 0){
+            summary = 0;
+            return false;
+        } else{
+            return true;
+        }
+    }
+}
+
+class RollDice {
+    public static void main(String[] args) {
+        for (int turn = 0; turn < 10; ++turn) {
+            for (Integer i : new Roll())
+                System.out.print(i + " ");
+            System.out.println();
+        }
+    }
+}
