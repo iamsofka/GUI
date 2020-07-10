@@ -1,0 +1,53 @@
+import java.util.ArrayList;
+import java.util.Iterator;
+
+public class DiffLettWords {
+implements Iterable<Thread>, Runnable{
+        private final ArrayList<Thread> list = new ArrayList<>();
+
+        public Letters(String name){
+            for (char letter : name.toCharArray()){
+                list.add(new Thread(() -> {
+                    while(true){
+                        try{
+                            System.out.print(letter);
+                            this.wait(500);
+                        } catch (InterruptedException e){
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                        "Thread" + letter));
+            }
+        }
+
+        public Iterator<Thread> iterator(){
+            return list.iterator();
+        }
+
+        public void run(){
+            for(Thread t : list) t.start();
+        }
+
+        public void stop(){
+            for(Thread t : list) t.stop();
+        }
+
+        public void start(){
+            run();
+        }
+    }
+
+    class main{
+        static void main(String[] args) {
+            Letters letters = new Letters("ABCD");
+            for (Thread t : letters)
+                System.out.println(t.getName() + " starting");
+            letters.start();
+            try { Thread.sleep(5000); }
+            catch(InterruptedException ignore) {}
+            letters.stop();
+            System.out.println("\nProgram completed.");
+        }
+    }
+}
