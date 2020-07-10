@@ -1,0 +1,218 @@
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+public class Bank {
+    public static File fIn = new File("Bank.dat");
+    public static File fErr = new File("Bank.err");
+
+    public static void main (String[] args) throws FileNotFoundException {
+        String fIn  = "Bank.dat";
+        String fErr = "Bank.err";
+
+        Map<String,Account> accs = readData(fIn, fErr);
+
+        for (Map.Entry<String,Account> e : accs.entrySet())
+            System.out.print(e.getValue());
+
+        try {
+            String errLog = new String(Files.readAllBytes(Paths.get(fErr)), UTF_8);
+            System.out.println("\nContent of " + "\"Bank.err\" follows:\n");
+            System.out.println(errLog);
+        } catch(IOException e) {
+            System.out.println("Problems with error log");
+            return;
+        }
+    }
+
+    public static Map<String, Account> readData(String fIn, String fErr) throws FileNotFoundException {
+        Map<String,Account> map = new HashMap<>();
+        File input = new File(fIn);
+        int counter = 1;
+
+        Scanner sc = new Scanner(input);
+        while (sc.hasNextLine()) {
+            String line = sc.nextLine();
+            String[] lines = line.split("\\s");
+            if (line.matches("([a-zA-Z]+\\s){3}[0-9]+")) {
+                if (!map.containsKey(lines[0]))
+                    map.put(lines[0],
+                            new Account(lines[0],
+                                    new Person(lines[1],
+                                            lines[2]),
+                                    Integer.parseInt(lines[3])));
+                else
+                    err("Line " + counter + ": account already exists");
+            }
+            if (line.matches("[a-zA-Z]+ [0-9]+")){
+                if (map.containsKey(lines[0])) {
+                    if (Integer.parseInt(lines[1]) > 0)
+                        map.get(lines[0]).adding(Integer.parseInt(lines[1]), Transaction.Costs.DEPOSIT);
+                    else
+                        map.get(lines[0]).adding(Integer.parseInt(lines[1]), Transaction.Costs.WITHDRAWAL);
+                } else
+                    err("Line " + counter + ": can't find the accaunt in the base");
+            }
+            if (Integer.parseInt(lines[2]) > 0) {
+                    map.get(lines[0]).adding(Integer.parseInt(lines[2]), map.get(lines[1]), map.get(lines[0]));
+                    map.get(lines[1]).adding(Integer.parseInt(lines[2]) * -1, map.get(lines[1]), map.get(lines[0]));
+                } else {
+                err("Line " + counter + ": change the amount into positive");
+                }
+            }
+            counter++;
+        return map;
+    }
+
+    public static void err(String fErr, String warning) {
+        try {
+            FileWriter fw = new FileWriter(new File(fErr), true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            fw.append(warning).append("\n");
+            bw.close();
+        } catch (IOException e) {
+            System.out.println("Warning: " + warning + "\n");
+        }
+    }
+    public static void err(String warning) {
+        try {
+            FileWriter fw = new FileWriter(fErr, true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            fw.append(warning).append("\n");
+            bw.close();
+        } catch (IOException e) {
+            System.out.println("Warning:" + warning + "\n");
+        }
+    }
+}
+
+class Person{
+    private String name;
+    private String surname;
+
+    public Person(String name, String surname){
+        this.name = name;
+        this.surname = surname;
+    }
+
+    @Override
+    public String toString(){
+        return "" + name + " " + surname;
+    }
+}
+
+class Account{
+    private String id;
+    private Person owner;
+    private int balance;
+    private List<Transaction> transactions = new LinkedList<>();
+
+    public Account(String id, Person owner, int balance){
+        if(balance >= 0){
+            this.id = id;
+            this.owner = owner;
+            this.balance = balance;
+            transactions.add(new Transaction(balance, Transaction.Costs.INIT_DEPOS));
+        } else {
+            Bank.err("Insufficient funds");
+        }
+    }
+
+    public void adding(int moneyAmount, Transaction.Costs kind){
+        if(kind == Transaction.Costs.DEPOSIT){
+            if(moneyAmount > 0){
+                this.balance += moneyAmount;
+                transactions.add(new Transaction(moneyAmount, kind));
+            } else {
+                Bank.err("Insufficient funds. Negative amount");
+            }
+        }
+        if(kind == Transaction.Costs.WITHDRAWAL){
+            if(moneyAmount > balance){
+                this.balance += moneyAmount;
+                transactions.add(new Transaction(moneyAmount, kind));
+            } else {
+                Bank.err("Insufficient funds. You don't have so much money");
+            }
+        } else {
+            Bank.err("Check your money");
+        }
+    }
+
+    public void adding(int moneyAmount, Account from, Account to){
+        if(moneyAmount > 0){
+            if(from.balance > moneyAmount){
+                from.balance -= moneyAmount;
+                to.balance += moneyAmount;
+                to.transactions.add(new Transaction(Transaction.Costs.TRANS_FROM, moneyAmount, from, null));
+                from.transactions.add(new Transaction(Transaction.Costs.TRANS_TO, moneyAmount, to, null));
+            } else {
+                Bank.err("Insufficient funds. You can't transfer from acc " + from.id + " to " + to.id);
+            }
+        }
+    }
+
+    @Override
+    public String toString(){
+        StringBuilder tr = new StringBuilder();
+        for(Transaction t : transactions){
+            tr.append(" ").append(t.toString()).append("\n");
+        }
+        return "*** Acc " + id + " ( " + owner + " ). Balance: " + balance + ". Transactions:" + "\n" + tr;
+    }
+
+    public String getId(){
+        return id;
+    }
+}
+
+class Transaction{
+    private long time;
+    private int moneyAmount;
+    private Account from;
+    private Account to;
+    private Costs kind;
+
+    public Transaction(int moneyAmount, Account from, Account to, Costs kind) {
+        this.time = System.currentTimeMillis();
+        this.from = from;
+        this.to = to;
+        this.moneyAmount = moneyAmount;
+        this.kind = kind;
+    }
+
+    @Override
+    public String toString(){
+        if(kind == Costs.TRANS_FROM){
+            return "" + moneyAmount + ": " + kind + " " + from.getId();
+        }
+        if(kind == Costs.TRANS_TO){
+            return "" + moneyAmount + ": " + kind + " " + to.getId();
+        }
+        else{
+            return "" + moneyAmount + ": " + kind;
+        }
+    }
+
+    enum Costs{
+        INIT_DEPOS,
+        DEPOSIT,
+        WITHDRAWAL,
+        TRANS_FROM,
+        TRANS_TO;
+    @Override
+    public String toString(){
+        switch(this){
+            case INIT_DEPOS: return "Init depos ";
+            case DEPOSIT: return "Deposit ";
+            case WITHDRAWAL: return "Withdrawal ";
+            case TRANS_FROM: return "Trans. from ";
+            case TRANS_TO: return "Trans. to ";
+            default: return this.toString();
+            }
+        }
+    }
+}
