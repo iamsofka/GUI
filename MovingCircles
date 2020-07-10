@@ -1,0 +1,107 @@
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Slider;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.Circle;
+import javafx.stage.Stage;
+
+import java.awt.*;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class Main extends Application {
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    public void start(Stage stage){
+        final double rad1 = 200, rad2 = 120, rad3 = 40, rad4 = 22;
+
+        DoubleProperty time = new SimpleDoubleProperty();
+
+        Circle bigCir = new Circle(rad1);
+        bigCir.setStroke(Paint.valueOf("green"));
+        bigCir.setFill(Paint.valueOf("yellow"));
+        bigCir.setStrokeWidth(10);
+        bigCir.setLayoutX(300);
+        bigCir.setLayoutY(500);
+
+        Circle smallCir = new Circle(rad2);
+        smallCir.setStroke(Paint.valueOf("red"));
+        smallCir.setFill(Paint.valueOf("white"));
+        smallCir.setStrokeWidth(5);
+        smallCir.setLayoutX(300);
+        smallCir.setLayoutY(500);
+
+        Circle bigBall = new Circle(rad3);
+        bigBall.setStroke(Paint.valueOf("green"));
+        bigBall.setFill(Paint.valueOf("red"));
+        bigBall.setStrokeWidth(7);
+        bigBall.setLayoutX(300);
+        bigBall.setLayoutY(300);
+
+        Circle smallBall =new Circle(rad4);
+        smallBall.setStroke(Paint.valueOf("red"));
+        smallBall.setFill(Paint.valueOf("green"));
+        smallBall.setStrokeWidth(3);
+        smallBall.setLayoutX(300);
+        smallBall.setLayoutY(380);
+
+        Pane bigPane = new Pane();
+        bigPane.getChildren().addAll(bigCir, bigBall);
+
+        Pane smallPane = new Pane();
+        smallPane.getChildren().addAll(smallCir, smallBall);
+
+        StackPane pans = new StackPane();
+        pans.getChildren().addAll(bigPane, smallPane);
+
+        AtomicReference<Double> rotBig = new AtomicReference<>(0.25);
+        AtomicReference<Double> rotSmall = new AtomicReference<>(0.25);
+
+        AnimationTimer anim1 = new AnimationTimer() {
+            @Override
+            public void handle(long l) {
+                bigPane.setRotate(bigPane.getRotate() + rotBig.get());
+            }
+        };
+
+        AnimationTimer anim2 = new AnimationTimer() {
+            @Override
+            public void handle(long l) {
+                smallPane.setRotate(smallPane.getRotate() - rotSmall.get());
+            }
+        };
+
+        Slider s = new Slider(0, 1,0.25);
+        s.setMajorTickUnit(0.25);
+        s.setShowTickLabels(true);
+        s.setShowTickMarks(true);
+        s.valueProperty().addListener((observable, newValue, oldValue) -> {
+            rotBig.set((Double)(newValue));
+            rotSmall.set((1 - rotBig.get()));
+        });
+
+        BorderPane b = new BorderPane();
+        b.setCenter(pans);
+        b.setBottom(s);
+
+        anim1.start();
+        anim2.start();
+
+        Scene sc = new Scene(b, 600, 1000);
+        stage.setScene(sc);
+        stage.setResizable(true);
+        stage.show();
+
+    }
+}
